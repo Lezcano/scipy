@@ -200,10 +200,16 @@ def gmean(a, axis=0, dtype=None, weights=None):
     if weights is not None:
         weights = np.asarray(weights, dtype=dtype)
 
-    with np.errstate(divide='ignore'):
-        log_a = np.log(a)
+    # logsumexp trick but for expsumlog
+    a_max = np.amax(a.real, axis=axis, keepdims=True)
 
-    return np.exp(np.average(log_a, axis=axis, weights=weights))
+    with np.errstate(divide='ignore'):
+        log_a = np.log(a / a_max)
+
+    a_max = np.squeeze(a_max, axis=axis)
+
+    out = a_max * np.exp(np.average(log_a, axis=axis, weights=weights))
+    return np.where(a_max == 0, np.zeros((), dtype=out.dtype), out)
 
 
 @_axis_nan_policy_factory(
